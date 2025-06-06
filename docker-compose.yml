@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: url-scanner-tools
+    volumes:
+      - ./storage/scanner:/app/results
+      - ./storage/logs:/app/logs
+      - ./storage/app:/app/storage
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+    networks:
+      - scanner-net
+
+networks:
+  scanner-net:
+    driver: bridge 
