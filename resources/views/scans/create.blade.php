@@ -19,14 +19,18 @@
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">New Security Scan</h2>
             
             <form id="scanForm" 
-                x-data="{ 
+                x-data="{
                     scanning: false,
+                    error: null,
                     progress: 0,
                     scanId: null,
-                    error: null,
-                    stage: null,
-                    elapsedTime: 0,
                     estimatedTime: 0,
+                    elapsedTime: 0,
+                    retryCount: 0,
+                    maxRetries: 5,
+                    retryDelay: 5000,
+                    timer: null,
+                    stage: null,
                     timeRemaining: 0,
                     statusInterval: null,
                     stages: {
@@ -59,6 +63,7 @@
                             this.error = null;
                             this.progress = 0;
                             this.elapsedTime = 0;
+                            this.retryCount = 0;
                             
                             const response = await fetch('{{ route('scans.store') }}', {
                                 method: 'POST',
@@ -87,80 +92,77 @@
                             this.scanning = false;
                         }
                     },
-                    async cancelScan() {
-                        if (!window.Swal) return;
-
-                        const result = await swalConfig.fire({
-                            title: 'Cancel Scan?',
-                            text: 'Are you sure you want to cancel the scan? This action cannot be undone.',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#dc2626',
-                            cancelButtonColor: '#4f46e5',
-                            confirmButtonText: 'Yes, cancel scan',
-                            cancelButtonText: 'No, continue scanning'
-                        });
-
-                        if (result.isConfirmed) {
-                            try {
-                                const response = await fetch(`/scans/${this.scanId}/cancel`, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json',
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
-                                    }
-                                });
-                                
-                                if (!response.ok) {
-                                    throw new Error('Error cancelling scan');
+                    async checkStatus() {
+                        if (!this.scanning || !this.scanId) return;
+                        
+                        try {
+                            const response = await fetch(`/scans/${this.scanId}/status`, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
                                 }
+                            });
 
-                                this.error = 'Scan cancelled';
-                                this.scanning = false;
-                                clearInterval(this.statusInterval);
-                            } catch (e) {
-                                this.error = e.message;
+                            // Si hay un error 504 o cualquier otro error, intentar de nuevo
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
                             }
+
+                            const data = await response.json();
+                            this.progress = data.progress;
+                            this.retryCount = 0; // Resetear el contador de reintentos si la petición fue exitosa
+
+                            if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
+                                this.scanning = false;
+                                if (data.status === 'failed') {
+                                    this.error = data.message || 'Scan failed';
+                                }
+                                clearInterval(this.timer);
+                                if (data.status === 'completed') {
+                                    window.location.href = `/scans/${this.scanId}`;
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error checking status:', e);
+                            
+                            // Incrementar contador de reintentos
+                            this.retryCount++;
+                            
+                            // Si excedimos el máximo de reintentos, mostrar error
+                            if (this.retryCount >= this.maxRetries) {
+                                this.error = 'Lost connection to server. The scan continues in the background. You can refresh the page to check the status.';
+                                this.scanning = false;
+                                clearInterval(this.timer);
+                                return;
+                            }
+                            
+                            // Esperar antes de reintentar
+                            await new Promise(resolve => setTimeout(resolve, this.retryDelay));
                         }
                     },
                     startStatusCheck() {
-                        let startTime = Date.now();
-                        
-                        this.statusInterval = setInterval(async () => {
-                            try {
-                                const response = await fetch(`/scans/${this.scanId}/status`);
-                                const data = await response.json();
-                                
-                                this.progress = data.progress || 0;
-                                this.stage = data.stage;
-                                this.elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                                this.timeRemaining = Math.max(0, this.estimatedTime - this.elapsedTime);
-                                
-                                if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
-                                    clearInterval(this.statusInterval);
-                                    if (data.status === 'completed' && window.Swal) {
-                                        await swalConfig.fire({
-                                            title: 'Scan Completed!',
-                                            text: 'Your security scan has finished successfully.',
-                                            icon: 'success'
-                                        });
-                                        window.location.href = `/scans/${this.scanId}`;
-                                    } else {
-                                        const messages = {
-                                            'failed': 'Scan failed. Please try again.',
-                                            'cancelled': 'Scan cancelled.'
-                                        };
-                                        this.error = messages[data.status] || data.error;
-                                        this.scanning = false;
-                                    }
-                                }
-                            } catch (e) {
-                                clearInterval(this.statusInterval);
-                                this.error = 'Error checking scan status';
-                                this.scanning = false;
-                            }
+                        this.timer = setInterval(() => {
+                            this.checkStatus();
+                            this.elapsedTime++;
                         }, 1000);
+                    },
+                    cancelScan() {
+                        if (!this.scanId) return;
+                        
+                        fetch(`/scans/${this.scanId}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                            }
+                        }).then(response => {
+                            if (!response.ok) throw new Error('Failed to cancel scan');
+                            this.scanning = false;
+                            clearInterval(this.timer);
+                        }).catch(e => {
+                            this.error = e.message;
+                        });
                     }
                 }"
                 @submit.prevent="startScan"
@@ -197,7 +199,8 @@
                             class="h-12 block w-full pl-4 pr-10 text-base border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 dark:bg-gray-700 dark:text-white transition-colors duration-200"
                             :disabled="scanning">
                             <option value="common">Quick (2-3 minutes)</option>
-                            <option value="medium" selected>Full (4-5 minutes)</option>
+                            <option value="medium">Medium (4-5 minutes)</option>
+                            <option value="full">Full (15-20 minutes)</option>
                         </select>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
                             Choose scan intensity. A full scan takes longer but finds more information.

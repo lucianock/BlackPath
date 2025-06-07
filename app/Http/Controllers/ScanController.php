@@ -50,7 +50,7 @@ class ScanController extends Controller
         try {
             $request->validate([
                 'domain' => 'required|string|max:255',
-                'wordlist' => 'required|in:common,medium'
+                'wordlist' => 'required|in:common,medium,full'
             ]);
 
             $domain = $request->input('domain');
@@ -77,9 +77,16 @@ class ScanController extends Controller
             // Start scan process directly
             $this->scannerService->startScanProcess($scanId);
 
+            // Adjust estimated time based on wordlist
+            $estimatedTime = [
+                'common' => 45,  // 2-3 minutes
+                'medium' => 60,  // 4-5 minutes
+                'full' => 180    // 15-20 minutes
+            ][$request->input('wordlist')];
+
             return response()->json([
                 'scan_id' => $scanId,
-                'estimated_time' => $request->input('wordlist') === 'common' ? 45 : 60
+                'estimated_time' => $estimatedTime
             ]);
 
         } catch (\Exception $e) {
@@ -128,18 +135,27 @@ class ScanController extends Controller
     public function status($scanId)
     {
         try {
-            $stage = Cache::get($scanId . '_stage');
+            // Aumentar el tiempo límite de ejecución para escaneos largos
+            set_time_limit(0);
+            ini_set('max_execution_time', 0);
+            
+            // Verificar si el escaneo existe
+            $scanInfo = Cache::get($scanId . '_info');
+            if (!$scanInfo) {
+                return response()->json([
+                    'error' => 'Scan not found'
+                ], 404);
+            }
+
+            // Obtener el progreso actual
             $progress = Cache::get($scanId . '_progress', 0);
-            $message = Cache::get($scanId . '_message');
             $status = Cache::get($scanId . '_status', 'running');
-            $startTime = Cache::get($scanId . '_start_time');
+            $message = Cache::get($scanId . '_message', '');
 
             return response()->json([
                 'status' => $status,
-                'stage' => $stage,
-                'progress' => round($progress, 1),
-                'message' => $message,
-                'elapsed_time' => $startTime ? now()->diffInSeconds($startTime) : 0
+                'progress' => $progress,
+                'message' => $message
             ]);
         } catch (\Exception $e) {
             Log::error("Error checking scan status: " . $e->getMessage());

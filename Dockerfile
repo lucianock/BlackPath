@@ -56,7 +56,8 @@ RUN go install github.com/OJ/gobuster/v3@latest && \
 
 # Descargar wordlists
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /app/wordlists/common.txt && \
-    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-directories.txt -O /app/wordlists/medium.txt
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-directories.txt -O /app/wordlists/medium.txt && \
+    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/directory-list-2.3-small.txt -O /app/wordlists/full.txt
 
 # Verificar que las herramientas están instaladas
 RUN which nmap && \

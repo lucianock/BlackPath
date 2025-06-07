@@ -381,6 +381,10 @@ class ScannerService
     }
     private function runGobusterScan($inputUrl, $wordlist)
     {
+        // Aumentar límites de PHP
+        ini_set('max_execution_time', 0);
+        set_time_limit(0);
+        
         // Kill any hanging gobuster processes first
         $killCmd = "pkill -f gobuster || true";
         $killProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $killCmd]);
@@ -419,12 +423,28 @@ class ScannerService
                     }
                 }
             }
-
         }
 
         Log::info("Processing Gobuster scan for domain: $baseUrl");
 
-        $wordlistPath = $wordlist === 'common' ? '/app/wordlists/common.txt' : '/app/wordlists/medium.txt';
+        // Seleccionar wordlist y ajustar configuración basada en el tipo de escaneo
+        $wordlistConfig = [
+            'common' => [
+                'path' => '/app/wordlists/common.txt',
+                'threads' => 20,
+                'timeout' => '10s'
+            ],
+            'medium' => [
+                'path' => '/app/wordlists/medium.txt',
+                'threads' => 30,
+                'timeout' => '15s'
+            ],
+            'full' => [
+                'path' => '/app/wordlists/full.txt',
+                'threads' => 40,
+                'timeout' => '20s'
+            ]
+        ][$wordlist];
 
         // Paso 1: Detectar status/length con curl
         $randomPath = '/' . \Str::uuid();
@@ -469,14 +489,20 @@ class ScannerService
 
         $statusesToExclude = implode(',', array_filter([$dummyStatus, '301', '302']));
 
-        $gobusterCmd = sprintf(
-            'gobuster dir -u %s -w %s -t 20 --timeout 10s --no-error -b %s --exclude-length %s 2>&1',
-            escapeshellarg($inputUrl),
-            escapeshellarg($wordlistPath),
-            escapeshellarg($statusesToExclude),
-            escapeshellarg($dummyLength)
-        );
+        // En Windows, usamos un archivo temporal para el output
+        $outputFile = storage_path('app/temp/gobuster_' . uniqid() . '.txt');
+        @mkdir(dirname($outputFile), 0777, true);
 
+        $gobusterCmd = sprintf(
+            'gobuster dir -u %s -w %s -t %d --timeout %s --no-error -b %s --exclude-length %s > %s 2>&1',
+            escapeshellarg($inputUrl),
+            escapeshellarg($wordlistConfig['path']),
+            $wordlistConfig['threads'],
+            $wordlistConfig['timeout'],
+            escapeshellarg($statusesToExclude),
+            escapeshellarg($dummyLength),
+            '/app/output.txt'
+        );
 
         Log::info("Executing gobuster command: " . $gobusterCmd);
 
@@ -489,28 +515,80 @@ class ScannerService
             $gobusterCmd
         ]);
 
-        $process->setTimeout(300);
-        $process->setIdleTimeout(60);
+        // Configurar proceso para Windows
+        $process->setEnv([
+            'COMPOSE_CONVERT_WINDOWS_PATHS' => 1,
+            'PATH' => getenv('PATH')
+        ]);
+        
+        // No establecer timeout para el proceso principal
+        $process->setTimeout(null);
+        $process->setIdleTimeout(null);
 
         Log::info("Starting gobuster scan for {$baseUrl}");
 
         $output = '';
-        $process->run(function ($type, $buffer) use (&$output) {
-            $output .= $buffer;
-            if (Process::ERR === $type) {
-                Log::error('Gobuster Error: ' . $buffer);
-            } else {
-                Log::info('Gobuster Output: ' . $buffer);
+        $lastProgressUpdate = 0;
+        $lastProgressValue = 0;
+
+        try {
+            $process->start();
+
+            while ($process->isRunning()) {
+                // Leer el archivo de salida del contenedor
+                $checkCmd = sprintf('cat /app/output.txt 2>/dev/null || true');
+                $outputProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $checkCmd]);
+                $outputProcess->run();
+                $currentOutput = $outputProcess->getOutput();
+
+                // Actualizar el output general
+                if (!empty($currentOutput) && $currentOutput !== $output) {
+                    $output = $currentOutput;
+                    
+                    // Buscar la última línea de progreso
+                    if (preg_match('/Progress: (\d+) \/ (\d+) \(([0-9.]+)%\)/', $output, $matches)) {
+                        $current = (int)$matches[1];
+                        $total = (int)$matches[2];
+                        $percentage = (float)$matches[3];
+                        
+                        // Solo actualizar si el progreso ha cambiado significativamente
+                        if ($percentage > $lastProgressValue + 1) {
+                            $this->updateProgress(0, 'gobuster', "Progress: {$current} / {$total} ({$percentage}%)");
+                            $lastProgressValue = $percentage;
+                        }
+                    }
+                }
+
+                // Dormir un poco para no sobrecargar el sistema
+                usleep(500000); // 0.5 segundos
             }
-        });
 
-        if (!$process->isSuccessful()) {
-            Log::error("Gobuster process failed with exit code: " . $process->getExitCode());
-            Log::error("Gobuster error output: " . $process->getErrorOutput());
-            throw new \RuntimeException("Gobuster scan failed: " . $process->getErrorOutput());
+            // Verificar el resultado final
+            if (!$process->isSuccessful()) {
+                throw new \RuntimeException("Gobuster scan failed: " . $process->getErrorOutput());
+            }
+
+            // Leer el output final
+            $finalCheckCmd = sprintf('cat /app/output.txt');
+            $finalOutputProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $finalCheckCmd]);
+            $finalOutputProcess->run();
+            $output = $finalOutputProcess->getOutput();
+
+            // Limpiar el archivo temporal
+            $cleanupCmd = sprintf('rm -f /app/output.txt');
+            $cleanupProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $cleanupCmd]);
+            $cleanupProcess->run();
+
+            if (empty(trim($output))) {
+                throw new \RuntimeException("Gobuster scan produced no output");
+            }
+
+            return $output;
+
+        } catch (\Exception $e) {
+            Log::error("Error running Gobuster: " . $e->getMessage());
+            throw $e;
         }
-
-        return $output;
     }
 
 }
