@@ -24,7 +24,7 @@ class ScannerService
             'verify' => false,
             'connect_timeout' => 3
         ]);
-        
+
         // Set PHP timeout to 5 minutes for long running scans
         set_time_limit(300);
     }
@@ -65,47 +65,47 @@ class ScannerService
             // Aumentar el tiempo máximo de ejecución a 5 minutos
             ini_set('max_execution_time', 300);
             set_time_limit(300);
-            
+
             // Iniciar verificación básica HTTP
             $this->updateProgress(5, 'http_check', 'Checking if website is accessible...');
-            
+
             $response = $this->client->request('GET', $this->scan->domain);
             $this->updateProgress(10, 'http_check', 'Website is accessible');
-            
+
             // Run nmap synchronously
             $this->updateProgress(15, 'nmap', 'Starting port scan...');
             $nmapOutput = $this->runNmap();
-            
+
             // Guardar resultado de nmap
             ScanResult::create([
                 'scan_id' => $this->scan->id,
                 'tool' => 'nmap',
                 'raw_output' => $nmapOutput
             ]);
-            
+
             $this->updateProgress(50, 'nmap', 'Port scan completed');
-            
+
             // Run gobuster synchronously
             $this->updateProgress(55, 'gobuster', 'Starting directory scan...');
             $gobusterOutput = $this->runGobuster();
-            
+
             // Guardar resultado de gobuster
             ScanResult::create([
                 'scan_id' => $this->scan->id,
                 'tool' => 'gobuster',
                 'raw_output' => $gobusterOutput
             ]);
-            
+
             $this->updateProgress(95, 'gobuster', 'Directory scan completed');
-            
+
             // Actualizar estado final
             $this->updateProgress(100, 'completed', 'Scan completed successfully');
             $this->scan->status = 'completed';
             $this->scan->finished_at = now();
             $this->scan->save();
-            
+
             return true;
-            
+
         } catch (\Exception $e) {
             Log::error("Error during scan: " . $e->getMessage());
             $this->scan->status = 'failed';
@@ -118,12 +118,12 @@ class ScannerService
     private function runNmap()
     {
         $domain = parse_url($this->scan->domain, PHP_URL_HOST) ?: $this->scan->domain;
-        
+
         $nmapCmd = sprintf(
             'nmap -sV -sC -Pn --max-retries 2 --host-timeout 30s -p80,443,8080,8443 %s 2>&1',
             escapeshellarg($domain)
         );
-        
+
         $command = [
             'docker',
             'exec',
@@ -136,11 +136,11 @@ class ScannerService
         $process = new Process($command);
         $process->setTimeout(45);
         $process->setEnv(['PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin']);
-        
+
         Log::info("Starting nmap scan for {$domain}", [
             'command' => $nmapCmd
         ]);
-        
+
         $output = '';
         $process->run(function ($type, $buffer) use (&$output) {
             $output .= $buffer;
@@ -150,15 +150,15 @@ class ScannerService
                 Log::info('Nmap Output: ' . $buffer);
             }
         });
-        
+
         if (!$process->isSuccessful()) {
             throw new \RuntimeException("Nmap scan failed: " . $process->getErrorOutput());
         }
-        
+
         if (empty(trim($output))) {
             throw new \RuntimeException("Nmap scan produced no output");
         }
-        
+
         return $output;
     }
 
@@ -166,7 +166,7 @@ class ScannerService
     {
         $domain = parse_url($this->scan->domain, PHP_URL_HOST) ?: $this->scan->domain;
         $wordlist = $this->scan->wordlist === 'common' ? '/app/wordlists/common.txt' : '/app/wordlists/medium.txt';
-        
+
         $gobusterCmd = 'gobuster dir'
             . ' -u ' . escapeshellarg($this->scan->domain)
             . ' -w ' . escapeshellarg($wordlist)
@@ -175,7 +175,7 @@ class ScannerService
             . ' --status-codes-blacklist 404'
             . ' --follow-redirect'
             . ' 2>&1';
-        
+
         $command = [
             'docker',
             'exec',
@@ -189,34 +189,34 @@ class ScannerService
         $process->setTimeout(300);
         $process->setIdleTimeout(60);
         $process->setEnv(['PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin']);
-        
+
         Log::info("Starting gobuster scan for {$domain}");
-        
+
         try {
             $output = '';
             $process->run(function ($type, $buffer) use (&$output) {
                 $output .= $buffer;
-                
+
                 // Update progress based on Gobuster output
                 if (preg_match('/Progress: (\d+) \/ (\d+) \(([0-9.]+)%\)/', $buffer, $matches)) {
                     $this->updateProgress(0, 'gobuster', $buffer);
                 }
-                
+
                 if (Process::ERR === $type) {
                     Log::error('Gobuster Error: ' . $buffer);
                 } else {
                     Log::info('Gobuster Output: ' . $buffer);
                 }
             });
-            
+
             if (!$process->isSuccessful()) {
                 throw new \RuntimeException("Gobuster scan failed: " . $process->getErrorOutput());
             }
-            
+
             if (empty(trim($output))) {
                 throw new \RuntimeException("Gobuster scan produced no output");
             }
-            
+
             return $output;
         } catch (\Exception $e) {
             Log::error("Error running Gobuster: " . $e->getMessage());
@@ -321,15 +321,15 @@ class ScannerService
     {
         try {
             $domain = parse_url($domain, PHP_URL_HOST) ?: $domain;
-            
+
             // Basic nmap command without complex options
             $nmapCmd = sprintf(
                 'nmap -p 80,443 -Pn %s',
                 escapeshellarg($domain)
             );
-            
+
             Log::info("Executing nmap command: " . $nmapCmd);
-            
+
             $process = new Process([
                 'docker',
                 'exec',
@@ -342,14 +342,14 @@ class ScannerService
                 '-Pn',
                 $domain
             ]);
-            
+
             $process->setTimeout(45);
-            
+
             Log::info("Starting nmap scan for {$domain}");
-            
+
             $output = '';
             $errorOutput = '';
-            
+
             $process->run(function ($type, $buffer) use (&$output, &$errorOutput) {
                 if (Process::ERR === $type) {
                     $errorOutput .= $buffer;
@@ -359,68 +359,127 @@ class ScannerService
                     Log::info('Nmap Output: ' . $buffer);
                 }
             });
-            
+
             if (!$process->isSuccessful()) {
                 Log::error("Nmap process failed with exit code: " . $process->getExitCode());
                 Log::error("Nmap error output: " . $errorOutput);
                 Log::error("Nmap standard output: " . $output);
                 throw new \RuntimeException("Nmap scan failed: " . ($errorOutput ?: $output));
             }
-            
+
             if (empty($output)) {
                 throw new \RuntimeException("Nmap scan produced no output");
             }
-            
+
             return $output;
-            
+
         } catch (\Exception $e) {
             Log::error("Error in runNmapScan: " . $e->getMessage());
             Log::error("Exception trace: " . $e->getTraceAsString());
             throw $e;
         }
     }
-
-    private function runGobusterScan($domain, $wordlist)
+    private function runGobusterScan($inputUrl, $wordlist)
     {
         // Kill any hanging gobuster processes first
         $killCmd = "pkill -f gobuster || true";
         $killProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $killCmd]);
         $killProcess->run();
-        
-        // Process the domain to ensure it's in the correct format
-        $domain = trim($domain);
-        
-        // Extract host from URL or use the domain as is
-        if (filter_var($domain, FILTER_VALIDATE_URL)) {
-            $parsedUrl = parse_url($domain);
-            $domain = $parsedUrl['host'];
-        } else {
-            // Remove any protocol prefix if somehow present
-            $domain = preg_replace('#^https?://#', '', $domain);
-        }
-        
-        // Remove any trailing slashes and paths
-        $domain = rtrim($domain, '/');
-        
-        // Ensure we have a valid domain
-        if (empty($domain)) {
-            throw new \RuntimeException("Invalid domain provided");
-        }
-        
-        $targetUrl = 'http://' . $domain;
 
-        Log::info("Processing Gobuster scan for domain: " . $targetUrl);
+        // Sanitizar entrada
+        $inputUrl = trim($inputUrl);
+        if (!preg_match('#^https?://#', $inputUrl)) {
+            $inputUrl = 'http://' . $inputUrl;
+        }
+
+        // Parsear URL para obtener dominio y path (si tiene)
+        $parsed = parse_url($inputUrl);
+        $scheme = $parsed['scheme'] ?? 'http';
+        $host = $parsed['host'] ?? '';
+        $path = isset($parsed['path']) ? rtrim($parsed['path'], '/') : '';
+
+        if (empty($host)) {
+            throw new \RuntimeException("Invalid domain or URL provided");
+        }
+
+        $baseUrl = $scheme . '://' . $host . $path;
+
+        // Detectar si hay redirección a HTTPS
+        $headers = @get_headers($baseUrl, 1);
+        if (is_array($headers) && isset($headers[0]) && strpos($headers[0], '301') !== false) {
+            foreach ($headers as $key => $value) {
+                if (stripos($key, 'Location') !== false) {
+                    $locations = is_array($value) ? $value : [$value];
+                    foreach ($locations as $loc) {
+                        if (stripos($loc, 'https://') === 0) {
+                            $baseUrl = 'https://' . $host . $path;
+                            Log::info("Redirect detected, switching to HTTPS: $baseUrl");
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+        }
+
+        Log::info("Processing Gobuster scan for domain: $baseUrl");
 
         $wordlistPath = $wordlist === 'common' ? '/app/wordlists/common.txt' : '/app/wordlists/medium.txt';
 
+        // Paso 1: Detectar status/length con curl
+        $randomPath = '/' . \Str::uuid();
+        $testUrl = rtrim($baseUrl, '/') . $randomPath;
+        $curlCmd = sprintf('curl -s -o /dev/null -w "%%{http_code} %%{size_download}" %s', escapeshellarg($testUrl));
+
+        $curlProcess = new Process(['docker', 'exec', self::CONTAINER_NAME, 'sh', '-c', $curlCmd]);
+        $curlProcess->run();
+        $curlOutput = trim($curlProcess->getOutput());
+
+        $dummyStatus = null;
+        $dummyLength = null;
+
+        if ($curlProcess->isSuccessful() && preg_match('/^\d{3} \d+$/', $curlOutput)) {
+            [$dummyStatus, $dummyLength] = explode(' ', $curlOutput);
+        } else {
+            Log::warning("Curl failed inside container, using PHP fallback for: $testUrl");
+
+            $headers = @get_headers($testUrl, 1);
+            if (is_array($headers) && isset($headers[0])) {
+                preg_match('/\d{3}/', $headers[0], $matches);
+                $dummyStatus = $matches[0] ?? '404';
+
+                $context = stream_context_create([
+                    'http' => ['method' => 'GET', 'timeout' => 10],
+                    'ssl' => ['verify_peer' => false, 'verify_peer_name' => false]
+                ]);
+
+                $body = @file_get_contents($testUrl, false, $context);
+                $dummyLength = is_string($body) ? strlen($body) : 0;
+            }
+        }
+
+        // Si no se pudo detectar, usar valores seguros
+        if (!$dummyStatus || !$dummyLength) {
+            Log::error("Failed to detect dummy status/length. Using fallback values 404/0");
+            $dummyStatus = '404';
+            $dummyLength = '0';
+        }
+
+        Log::info("Detected dummy status: $dummyStatus | length: $dummyLength");
+
+        $statusesToExclude = implode(',', array_filter([$dummyStatus, '301', '302']));
+
         $gobusterCmd = sprintf(
-            'gobuster dir -u %s -w %s -t 20 --timeout 10s --no-error --wildcard 2>&1',
-            escapeshellarg($targetUrl),
-            escapeshellarg($wordlistPath)
+            'gobuster dir -u %s -w %s -t 20 --timeout 10s --no-error -b %s --exclude-length %s 2>&1',
+            escapeshellarg($inputUrl),
+            escapeshellarg($wordlistPath),
+            escapeshellarg($statusesToExclude),
+            escapeshellarg($dummyLength)
         );
 
+
         Log::info("Executing gobuster command: " . $gobusterCmd);
-        
+
         $process = new Process([
             'docker',
             'exec',
@@ -429,12 +488,12 @@ class ScannerService
             '-c',
             $gobusterCmd
         ]);
-        
+
         $process->setTimeout(300);
         $process->setIdleTimeout(60);
-        
-        Log::info("Starting gobuster scan for {$targetUrl}");
-        
+
+        Log::info("Starting gobuster scan for {$baseUrl}");
+
         $output = '';
         $process->run(function ($type, $buffer) use (&$output) {
             $output .= $buffer;
@@ -444,13 +503,14 @@ class ScannerService
                 Log::info('Gobuster Output: ' . $buffer);
             }
         });
-        
+
         if (!$process->isSuccessful()) {
             Log::error("Gobuster process failed with exit code: " . $process->getExitCode());
             Log::error("Gobuster error output: " . $process->getErrorOutput());
             throw new \RuntimeException("Gobuster scan failed: " . $process->getErrorOutput());
         }
-        
+
         return $output;
     }
-} 
+
+}
