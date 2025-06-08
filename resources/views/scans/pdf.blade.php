@@ -101,7 +101,7 @@
     <div class="section">
         <div class="section-title">Discovered Resources</div>
         @php
-            $gobusterOutput = $results['gobuster'][0]->raw_output;
+            $gobusterOutput = is_array($results['gobuster'][0]->raw_output) ? implode("\n", $results['gobuster'][0]->raw_output) : $results['gobuster'][0]->raw_output;
             preg_match_all('/\/([\w-]+(?:\.[\w-]+)*)\s+\(Status: (\d+)\)/', $gobusterOutput, $matches);
             $resources = [];
             foreach ($matches[1] as $index => $path) {
