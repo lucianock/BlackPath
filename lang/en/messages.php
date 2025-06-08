@@ -13,7 +13,7 @@ return [
     'no_scans' => 'No scans performed',
     'scan_results' => 'Scan Results',
     'domain_to_scan' => 'Domain to scan',
-    'wordlist' => 'Wordlist',
+    'wordlist' => 'Scan Type',
     'common_fast' => 'Quick (2-3 minutes)',
     'medium_recommended' => 'Medium (4-5 minutes)',
     'full_scan' => 'Full (15-20 minutes)',

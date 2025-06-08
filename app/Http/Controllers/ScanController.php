@@ -30,7 +30,12 @@ class ScanController extends Controller
                 $scanInfo['id'] = $scanId;
                 $scanInfo['status'] = Cache::get($scanId . '_status', 'unknown');
                 $scanInfo['progress'] = Cache::get($scanId . '_progress', 0);
-                $scanInfo['started_at'] = Cache::get($scanId . '_start_time');
+                
+                // Manejar las fechas
+                $scanInfo['started_at'] = isset($scanInfo['started_at']) ? 
+                    Carbon::parse($scanInfo['started_at']) : 
+                    Cache::get($scanId . '_start_time');
+                    
                 $scanInfo['finished_at'] = Cache::get($scanId . '_finished_at');
                 $scans->push((object)$scanInfo);
             }
