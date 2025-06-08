@@ -14,12 +14,12 @@
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
                         Scan Results for {{ parse_url($scan->domain, PHP_URL_HOST) }}
                     </h2>
-                    <div class="flex space-x-4">
+                    <div class="flex space-x-4 items-center">
                         <a href="{{ route('scans.export', $scan->id) }}" 
                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
                             Export PDF
                         </a>
-                        <span class="px-3 py-1 text-sm font-semibold rounded-full
+                        <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full
                             {{ $scan->status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : '' }}
                             {{ $scan->status === 'running' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' }}
                             {{ $scan->status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : '' }}

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class ScanController extends Controller
 {
@@ -109,7 +110,12 @@ class ScanController extends Controller
         $scanInfo['id'] = $scanId;
         $scanInfo['status'] = Cache::get($scanId . '_status', 'unknown');
         $scanInfo['progress'] = Cache::get($scanId . '_progress', 0);
-        $scanInfo['started_at'] = Cache::get($scanId . '_start_time');
+        
+        // Manejar las fechas
+        $scanInfo['started_at'] = isset($scanInfo['started_at']) ? 
+            Carbon::parse($scanInfo['started_at']) : 
+            Cache::get($scanId . '_start_time');
+            
         $scanInfo['finished_at'] = Cache::get($scanId . '_finished_at');
         $scanInfo['error'] = Cache::get($scanId . '_message'); // Add error message if any
         

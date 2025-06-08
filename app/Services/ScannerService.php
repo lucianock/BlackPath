@@ -252,6 +252,11 @@ class ScannerService
             $domain = $scanInfo['domain'];
             $wordlist = $scanInfo['wordlist'];
 
+            // Guardar tiempo de inicio
+            $startTime = now();
+            Cache::put($scanId . '_start_time', $startTime, 3600);
+            Cache::put($scanId . '_info', array_merge($scanInfo, ['started_at' => $startTime]), 3600);
+
             // Update status to running
             Cache::put($scanId . '_status', 'running', 3600);
             Cache::put($scanId . '_stage', 'http_check', 3600);
