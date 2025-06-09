@@ -100,51 +100,152 @@
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Website Technologies</h3>
                 @php
                     $whatwebOutput = $results['whatweb'][0]->raw_output;
-                    $technologies = [];
+                    $info = [
+                        'server' => [],           // Tecnologías del servidor
+                        'frontend' => [],         // Tecnologías del frontend
+                        'security' => [],         // Características de seguridad
+                        'contact' => [],          // Información de contacto
+                        'location' => null,       // Ubicación del servidor
+                        'redirects' => []         // Cadena de redirecciones
+                    ];
                     
-                    // Try to parse as JSON first
-                    try {
-                        $jsonData = json_decode($whatwebOutput, true);
-                        if (is_array($jsonData)) {
-                            foreach ($jsonData as $target) {
-                                if (isset($target['plugins'])) {
-                                    foreach ($target['plugins'] as $plugin => $data) {
-                                        if ($plugin !== 'Title' && $plugin !== 'IP') {
-                                            $version = isset($data['version']) ? " " . $data['version'] : "";
-                                            $technologies[] = $plugin . $version;
-                                        }
-                                    }
+                    // Parse the standard WhatWeb output format
+                    $lines = explode("\n", $whatwebOutput);
+                    foreach ($lines as $line) {
+                        if (preg_match('/^(https?:\/\/[^\s]+)\s+\[(.*?)\](.*)$/', $line, $matches)) {
+                            $url = $matches[1];
+                            $status = $matches[2];
+                            $details = $matches[3];
+                            
+                            // Store redirect information
+                            if (strpos($status, '302') !== false || strpos($status, '301') !== false) {
+                                if (preg_match('/RedirectLocation\[(.*?)\]/', $details, $redirectMatch)) {
+                                    $info['redirects'][$url] = $redirectMatch[1];
                                 }
                             }
-                        }
-                    } catch (\Exception $e) {
-                        // Fallback to regex parsing if JSON fails
-                        preg_match_all('/\[(.*?)\]/', $whatwebOutput, $matches);
-                        foreach ($matches[1] as $match) {
-                            if (strpos($match, 'Title') === false && strpos($match, 'IP') === false) {
-                                $parts = explode('[', $match);
-                                foreach ($parts as $part) {
-                                    if (!empty($part)) {
-                                        $tech = trim(str_replace(']', '', $part));
-                                        if ($tech) $technologies[] = $tech;
-                                    }
+                            
+                            // Extract and categorize information
+                            preg_match_all('/\[(.*?)\]/', $details, $techMatches);
+                            foreach ($techMatches[1] as $tech) {
+                                // Server Technologies
+                                if (preg_match('/^(Apache|nginx|IIS|PHP)(?:\[(.*?)\])?$/', $tech, $matches)) {
+                                    $version = isset($matches[2]) ? $matches[2] : null;
+                                    $info['server'][$matches[1]] = $version;
+                                }
+                                // Frontend Technologies
+                                elseif (preg_match('/^(jQuery|Bootstrap|HTML5|JavaScript|CSS|Lightbox|YouTube)(?:\[(.*?)\])?$/', $tech, $matches)) {
+                                    $version = isset($matches[2]) ? $matches[2] : null;
+                                    $info['frontend'][$matches[1]] = $version;
+                                }
+                                // Security Headers
+                                elseif (strpos($tech, 'content-security-policy') !== false) {
+                                    $info['security'][] = 'Content Security Policy (CSP)';
+                                }
+                                // Contact Information
+                                elseif (preg_match('/^Email\[(.*?)\]$/', $tech, $matches)) {
+                                    $info['contact']['email'] = $matches[1];
+                                }
+                                // Location Information
+                                elseif (preg_match('/^Country\[(.*?)\]/', $tech, $matches)) {
+                                    $info['location'] = $matches[1];
                                 }
                             }
                         }
                     }
-                    
-                    $technologies = array_unique($technologies);
                 @endphp
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @foreach($technologies as $tech)
-                    <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
-                        </svg>
-                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $tech }}</span>
+
+                @if(count($info['redirects']) > 0)
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Redirecciones Detectadas</h4>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        @foreach($info['redirects'] as $from => $to)
+                        <div class="flex items-center space-x-2 text-sm">
+                            <span class="text-gray-600 dark:text-gray-400">{{ parse_url($from, PHP_URL_HOST) }}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-gray-600 dark:text-gray-400">{{ parse_url($to, PHP_URL_HOST) }}</span>
+                        </div>
+                        @endforeach
                     </div>
-                    @endforeach
+                </div>
+                @endif
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Tecnologías del Servidor -->
+                    @if(count($info['server']) > 0)
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Servidor Web</h4>
+                        <div class="space-y-2">
+                            @foreach($info['server'] as $tech => $version)
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">
+                                    {{ $tech }}
+                                    @if($version)
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">versión {{ $version }}</span>
+                                    @endif
+                                </span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- Tecnologías Frontend -->
+                    @if(count($info['frontend']) > 0)
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Tecnologías Frontend</h4>
+                        <div class="space-y-2">
+                            @foreach($info['frontend'] as $tech => $version)
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">
+                                    {{ $tech }}
+                                    @if($version)
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">versión {{ $version }}</span>
+                                    @endif
+                                </span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- Características de Seguridad -->
+                    @if(count($info['security']) > 0)
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Características de Seguridad</h4>
+                        <div class="space-y-2">
+                            @foreach($info['security'] as $feature)
+                            <div class="flex items-center space-x-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-sm text-gray-700 dark:text-gray-300">{{ $feature }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- Información de Contacto -->
+                    @if(isset($info['contact']['email']))
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Información de Contacto</h4>
+                        <div class="flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ $info['contact']['email'] }}</span>
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -225,9 +326,6 @@
                     <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
                         403: Forbidden
                     </span>
-                    <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
-                        404: Not Found
-                    </span>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4">
@@ -236,13 +334,36 @@
                         preg_match_all('/\/([\\w-]+(?:\\.[\\w-]+)*)\\s+\\(Status: (\\d+)\\)/', $gobusterOutput, $matches);
                         $resources = [];
                         foreach ($matches[1] as $index => $path) {
-                            if ($path !== 'favicon.ico') {
+                            if ($path !== 'favicon.ico' && $matches[2][$index] !== '404') {
                                 $resources[] = [
                                     'path' => $path,
                                     'status' => $matches[2][$index]
                                 ];
                             }
                         }
+                        
+                        // Ordenar los recursos por código de estado
+                        usort($resources, function($a, $b) {
+                            // Definir el orden de prioridad de los códigos
+                            $priority = [
+                                '200' => 1,  // Primero los 200
+                                '301' => 2,  // Luego los 301
+                                '302' => 2,  // Los 302 tienen la misma prioridad que 301
+                                '403' => 3   // Luego los 403
+                            ];
+                            
+                            // Obtener la prioridad de cada código, si no está definida usar 999
+                            $priorityA = $priority[$a['status']] ?? 999;
+                            $priorityB = $priority[$b['status']] ?? 999;
+                            
+                            // Ordenar primero por prioridad
+                            if ($priorityA !== $priorityB) {
+                                return $priorityA - $priorityB;
+                            }
+                            
+                            // Si tienen la misma prioridad, ordenar por path
+                            return strcmp($a['path'], $b['path']);
+                        });
                     @endphp
                     
                     @foreach($resources as $resource)
