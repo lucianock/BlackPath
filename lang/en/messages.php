@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'app_name' => 'URL Scanner',
+    'app_name' => 'BlackPath',
     'scans' => 'Scans',
     'new_scan' => 'New Scan',
     'completed_scans' => 'Completed Scans',

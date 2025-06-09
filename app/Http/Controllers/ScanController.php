@@ -116,7 +116,7 @@ class ScanController extends Controller
         $scanInfo['status'] = Cache::get($scanId . '_status', 'unknown');
         $scanInfo['progress'] = Cache::get($scanId . '_progress', 0);
         
-        // Manejar las fechas
+        // Handle dates
         $scanInfo['started_at'] = isset($scanInfo['started_at']) ? 
             Carbon::parse($scanInfo['started_at']) : 
             Cache::get($scanId . '_start_time');
@@ -125,6 +125,11 @@ class ScanController extends Controller
         $scanInfo['error'] = Cache::get($scanId . '_message'); // Add error message if any
         
         $results = [
+            'whatweb' => [
+                (object)[
+                    'raw_output' => Cache::get($scanId . '_results_whatweb')
+                ]
+            ],
             'nmap' => [
                 (object)[
                     'raw_output' => Cache::get($scanId . '_results_nmap')
@@ -193,6 +198,11 @@ class ScanController extends Controller
     {
         $scanInfo = Cache::get($scanId . '_info');
         $results = [
+            'whatweb' => [
+                (object)[
+                    'raw_output' => Cache::get($scanId . '_results_whatweb')
+                ]
+            ],
             'nmap' => [
                 (object)[
                     'raw_output' => Cache::get($scanId . '_results_nmap')

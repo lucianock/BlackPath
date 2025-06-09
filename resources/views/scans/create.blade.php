@@ -34,9 +34,10 @@
                     timeRemaining: 0,
                     statusInterval: null,
                     stages: {
-                        'http_check': { name: 'Checking website accessibility', weight: 10 },
-                        'nmap': { name: 'Analyzing security (Port scanning)', weight: 40 },
-                        'gobuster': { name: 'Discovering resources', weight: 50 }
+                        'http_check': { name: 'Checking website accessibility', weight: 5 },
+                        'whatweb': { name: 'Analyzing technologies', weight: 20 },
+                        'nmap': { name: 'Analyzing security (Port scanning)', weight: 30 },
+                        'gobuster': { name: 'Discovering resources', weight: 45 }
                     },
                     getCurrentStatus() {
                         if (!this.stage) return 'Initializing scan...';

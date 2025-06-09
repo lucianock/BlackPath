@@ -11,13 +11,13 @@
     });
 
     function openAllLinks() {
-        // Obtener el dominio base
+        // Get base domain
         const domain = '{{ $scan->domain }}';
         
-        // Obtener todos los recursos descubiertos
+        // Get all discovered resources
         const resources = document.querySelectorAll('[data-resource-path]');
         
-        // Confirmar antes de abrir múltiples pestañas
+        // Confirm before opening multiple tabs
         swalConfig.fire({
             title: 'Open all discovered resources?',
             text: `This will open ${resources.length} tabs. Make sure your browser allows pop-ups.`,
@@ -93,27 +93,116 @@
         </div>
         @endif
 
-        <!-- Security Summary -->
+        <!-- Technology Analysis -->
+        @if(isset($results['whatweb']))
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div class="p-8">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Website Technologies</h3>
+                @php
+                    $whatwebOutput = $results['whatweb'][0]->raw_output;
+                    $technologies = [];
+                    
+                    // Try to parse as JSON first
+                    try {
+                        $jsonData = json_decode($whatwebOutput, true);
+                        if (is_array($jsonData)) {
+                            foreach ($jsonData as $target) {
+                                if (isset($target['plugins'])) {
+                                    foreach ($target['plugins'] as $plugin => $data) {
+                                        if ($plugin !== 'Title' && $plugin !== 'IP') {
+                                            $version = isset($data['version']) ? " " . $data['version'] : "";
+                                            $technologies[] = $plugin . $version;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // Fallback to regex parsing if JSON fails
+                        preg_match_all('/\[(.*?)\]/', $whatwebOutput, $matches);
+                        foreach ($matches[1] as $match) {
+                            if (strpos($match, 'Title') === false && strpos($match, 'IP') === false) {
+                                $parts = explode('[', $match);
+                                foreach ($parts as $part) {
+                                    if (!empty($part)) {
+                                        $tech = trim(str_replace(']', '', $part));
+                                        if ($tech) $technologies[] = $tech;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    $technologies = array_unique($technologies);
+                @endphp
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($technologies as $tech)
+                    <div class="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ $tech }}</span>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Security Overview -->
         @if(isset($results['nmap']))
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
             <div class="p-8">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Security Overview</h3>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Security Overview</h3>
                 @php
                     $nmapOutput = $results['nmap'][0]->raw_output;
-                    $isSecure = !str_contains(strtolower($nmapOutput), 'vulnerable');
+                    preg_match_all('/(\d+)\/tcp\s+(\w+)\s+(\w+)\s+(.*)/', $nmapOutput, $matches);
+                    $ports = [];
+                    for ($i = 0; $i < count($matches[0]); $i++) {
+                        $ports[] = [
+                            'number' => $matches[1][$i],
+                            'state' => $matches[2][$i],
+                            'service' => $matches[3][$i],
+                            'version' => $matches[4][$i]
+                        ];
+                    }
                 @endphp
-                <div class="flex items-center mb-4">
-                    <div class="w-12 h-12 rounded-full flex items-center justify-center {{ $isSecure ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                        <i class="fas {{ $isSecure ? 'fa-shield-check' : 'fa-shield-exclamation' }} text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-                            {{ $isSecure ? 'No Critical Issues Found' : 'Some Attention Required' }}
-                        </h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                            Basic security scan completed for {{ parse_url($scan->domain, PHP_URL_HOST) }}
-                        </p>
-                    </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-900">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Port</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">State</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Service</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            @foreach($ports as $port)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ $port['number'] }}/tcp
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                        {{ $port['state'] === 'open' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : '' }}
+                                        {{ $port['state'] === 'filtered' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' }}
+                                        {{ $port['state'] === 'closed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : '' }}">
+                                        {{ $port['state'] }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ $port['service'] }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                    {{ $port['version'] }}
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -123,7 +212,7 @@
         @if(isset($results['gobuster']))
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
             <div class="p-8">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Discovered Resources</h3>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-6">Discovered Resources</h3>
                 
                 <!-- HTTP Status Legend -->
                 <div class="mb-6 flex flex-wrap gap-3">
@@ -141,7 +230,7 @@
                     </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                     @php
                         $gobusterOutput = $results['gobuster'][0]->raw_output;
                         preg_match_all('/\/([\\w-]+(?:\\.[\\w-]+)*)\\s+\\(Status: (\\d+)\\)/', $gobusterOutput, $matches);
@@ -157,20 +246,20 @@
                     @endphp
                     
                     @foreach($resources as $resource)
-                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <a href="{{ url($scan->domain . '/' . $resource['path']) }}" 
-                               target="_blank"
-                               data-resource-path="{{ $resource['path'] }}"
-                               class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 truncate flex-1">
-                                /{{ $resource['path'] }}
-                            </a>
-                            <span class="ml-4 px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                {{ $resource['status'] >= 200 && $resource['status'] < 300 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : '' }}
-                                {{ $resource['status'] >= 300 && $resource['status'] < 400 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' }}
-                                {{ $resource['status'] >= 400 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : '' }}">
-                                {{ $resource['status'] }}
-                            </span>
-                        </div>
+                    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 rounded-lg px-4 py-2">
+                        <a href="{{ url($scan->domain . '/' . $resource['path']) }}" 
+                           target="_blank"
+                           data-resource-path="{{ $resource['path'] }}"
+                           class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 truncate flex-1">
+                            /{{ $resource['path'] }}
+                        </a>
+                        <span class="ml-4 px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {{ $resource['status'] >= 200 && $resource['status'] < 300 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : '' }}
+                            {{ $resource['status'] >= 300 && $resource['status'] < 400 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' }}
+                            {{ $resource['status'] >= 400 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : '' }}">
+                            {{ $resource['status'] }}
+                        </span>
+                    </div>
                     @endforeach
                 </div>
             </div>

@@ -42,13 +42,14 @@ class ScannerService
             if ($tool === 'gobuster' && preg_match('/Progress: (\d+) \/ (\d+) \(([0-9.]+)%\)/', $message, $matches)) {
                 $current = $matches[1];
                 $total = $matches[2];
-                $progress = 55 + (40 * ($current / $total)); // 55-95% range for Gobuster
+                $progress = 65 + (30 * ($current / $total)); // 65-95% range for Gobuster
             }
 
             $stages = [
-                'http_check' => ['weight' => 10, 'name' => 'Checking website accessibility'],
-                'nmap' => ['weight' => 40, 'name' => 'Analyzing security (Port scanning)'],
-                'gobuster' => ['weight' => 50, 'name' => 'Discovering resources']
+                'http_check' => ['weight' => 5, 'name' => 'Checking website accessibility'],
+                'whatweb' => ['weight' => 20, 'name' => 'Analyzing technologies'],
+                'nmap' => ['weight' => 30, 'name' => 'Analyzing security (Port scanning)'],
+                'gobuster' => ['weight' => 45, 'name' => 'Discovering resources']
             ];
 
             $this->scan->progress = round($progress, 1);
@@ -62,34 +63,43 @@ class ScannerService
     public function startScan()
     {
         try {
-            // Aumentar el tiempo máximo de ejecución a 5 minutos
-            ini_set('max_execution_time', 300);
-            set_time_limit(300);
-
             // Iniciar verificación básica HTTP
             $this->updateProgress(5, 'http_check', 'Checking if website is accessible...');
 
             $response = $this->client->request('GET', $this->scan->domain);
             $this->updateProgress(10, 'http_check', 'Website is accessible');
 
-            // Run nmap synchronously
-            $this->updateProgress(15, 'nmap', 'Starting port scan...');
+            // Run WhatWeb scan
+            $this->updateProgress(15, 'whatweb', 'Analyzing website technologies...');
+            $whatwebOutput = $this->runWhatWeb($this->scan->domain);
+            
+            // Save WhatWeb results
+            ScanResult::create([
+                'scan_id' => $this->scan->id,
+                'tool' => 'whatweb',
+                'raw_output' => $whatwebOutput
+            ]);
+
+            $this->updateProgress(30, 'whatweb', 'Technology analysis completed');
+
+            // Run nmap scan
+            $this->updateProgress(35, 'nmap', 'Starting port scan...');
             $nmapOutput = $this->runNmap();
 
-            // Guardar resultado de nmap
+            // Save nmap results
             ScanResult::create([
                 'scan_id' => $this->scan->id,
                 'tool' => 'nmap',
                 'raw_output' => $nmapOutput
             ]);
 
-            $this->updateProgress(50, 'nmap', 'Port scan completed');
+            $this->updateProgress(60, 'nmap', 'Port scan completed');
 
-            // Run gobuster synchronously
-            $this->updateProgress(55, 'gobuster', 'Starting directory scan...');
+            // Run gobuster scan
+            $this->updateProgress(65, 'gobuster', 'Starting directory scan...');
             $gobusterOutput = $this->runGobuster();
 
-            // Guardar resultado de gobuster
+            // Save gobuster results
             ScanResult::create([
                 'scan_id' => $this->scan->id,
                 'tool' => 'gobuster',
@@ -98,7 +108,7 @@ class ScannerService
 
             $this->updateProgress(95, 'gobuster', 'Directory scan completed');
 
-            // Actualizar estado final
+            // Update final status
             $this->updateProgress(100, 'completed', 'Scan completed successfully');
             $this->scan->status = 'completed';
             $this->scan->finished_at = now();
@@ -112,6 +122,68 @@ class ScannerService
             $this->scan->error = $e->getMessage();
             $this->scan->save();
             return false;
+        }
+    }
+
+    private function runWhatWeb($domain)
+    {
+        try {
+            $domain = parse_url($domain, PHP_URL_HOST) ?: $domain;
+
+            // Use JSON output format for better parsing
+            $whatwebCmd = sprintf(
+                'whatweb --color=never --log-json=- %s 2>&1',
+                escapeshellarg($domain)
+            );
+
+            Log::info("Executing WhatWeb command: " . $whatwebCmd);
+
+            $process = new Process([
+                'docker',
+                'exec',
+                '-u',
+                'scanner',
+                self::CONTAINER_NAME,
+                'sh',
+                '-c',
+                $whatwebCmd
+            ]);
+
+            $process->setTimeout(60);
+            $process->setEnv(['PATH' => '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin']);
+
+            Log::info("Starting WhatWeb scan for {$domain}");
+
+            $output = '';
+            $errorOutput = '';
+
+            $process->run(function ($type, $buffer) use (&$output, &$errorOutput) {
+                if (Process::ERR === $type) {
+                    $errorOutput .= $buffer;
+                    Log::error('WhatWeb Error Output: ' . $buffer);
+                } else {
+                    $output .= $buffer;
+                    Log::info('WhatWeb Output: ' . $buffer);
+                }
+            });
+
+            if (!$process->isSuccessful()) {
+                Log::error("WhatWeb process failed with exit code: " . $process->getExitCode());
+                Log::error("WhatWeb error output: " . $errorOutput);
+                Log::error("WhatWeb standard output: " . $output);
+                throw new \RuntimeException("WhatWeb scan failed: " . ($errorOutput ?: $output));
+            }
+
+            if (empty($output)) {
+                throw new \RuntimeException("WhatWeb scan produced no output");
+            }
+
+            return $output;
+
+        } catch (\Exception $e) {
+            Log::error("Error in runWhatWeb: " . $e->getMessage());
+            Log::error("Exception trace: " . $e->getTraceAsString());
+            throw $e;
         }
     }
 
@@ -252,7 +324,7 @@ class ScannerService
             $domain = $scanInfo['domain'];
             $wordlist = $scanInfo['wordlist'];
 
-            // Guardar tiempo de inicio
+            // Save start time
             $startTime = now();
             Cache::put($scanId . '_start_time', $startTime, 3600);
             Cache::put($scanId . '_info', array_merge($scanInfo, ['started_at' => $startTime]), 3600);
@@ -275,15 +347,30 @@ class ScannerService
                 return;
             }
 
+            // Run WhatWeb scan
+            Cache::put($scanId . '_stage', 'whatweb', 3600);
+            Cache::put($scanId . '_progress', 15, 3600);
+            Cache::put($scanId . '_message', 'Analyzing website technologies...', 3600);
+
+            try {
+                $whatwebOutput = $this->runWhatWeb($domain);
+                Cache::put($scanId . '_results_whatweb', $whatwebOutput, 3600);
+                Cache::put($scanId . '_progress', 30, 3600);
+                Cache::put($scanId . '_message', 'Technology analysis completed', 3600);
+            } catch (\Exception $e) {
+                Log::error("WhatWeb scan failed: " . $e->getMessage());
+                // Continue with other scans even if WhatWeb fails
+            }
+
             // Run Nmap scan
             Cache::put($scanId . '_stage', 'nmap', 3600);
-            Cache::put($scanId . '_progress', 15, 3600);
+            Cache::put($scanId . '_progress', 35, 3600);
             Cache::put($scanId . '_message', 'Starting port scan...', 3600);
 
             try {
                 $nmapOutput = $this->runNmapScan($domain);
                 Cache::put($scanId . '_results_nmap', $nmapOutput, 3600);
-                Cache::put($scanId . '_progress', 50, 3600);
+                Cache::put($scanId . '_progress', 60, 3600);
                 Cache::put($scanId . '_message', 'Port scan completed', 3600);
             } catch (\Exception $e) {
                 Log::error("Nmap scan failed: " . $e->getMessage());
@@ -294,7 +381,7 @@ class ScannerService
 
             // Run Gobuster scan
             Cache::put($scanId . '_stage', 'gobuster', 3600);
-            Cache::put($scanId . '_progress', 55, 3600);
+            Cache::put($scanId . '_progress', 65, 3600);
             Cache::put($scanId . '_message', 'Starting directory scan...', 3600);
 
             try {
@@ -309,14 +396,14 @@ class ScannerService
                 return;
             }
 
-            // Mark scan as completed
+            // Update final status
             Cache::put($scanId . '_status', 'completed', 3600);
             Cache::put($scanId . '_progress', 100, 3600);
             Cache::put($scanId . '_message', 'Scan completed successfully', 3600);
             Cache::put($scanId . '_finished_at', now(), 3600);
 
         } catch (\Exception $e) {
-            Log::error("Error processing scan {$scanId}: " . $e->getMessage());
+            Log::error("Error in scan process: " . $e->getMessage());
             Cache::put($scanId . '_status', 'failed', 3600);
             Cache::put($scanId . '_message', 'Scan failed: ' . $e->getMessage(), 3600);
         }

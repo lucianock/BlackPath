@@ -52,6 +52,31 @@
             background: #c6f6d5;
             color: #2f855a;
         }
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .tech-item {
+            background: #f3f4f6;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -82,18 +107,92 @@
         </div>
     </div>
 
+    @if(isset($results['whatweb']))
+    <div class="section">
+        <div class="section-title">Website Technologies</div>
+        @php
+            $whatwebOutput = $results['whatweb'][0]->raw_output;
+            $technologies = [];
+            
+            // Try to parse as JSON first
+            try {
+                $jsonData = json_decode($whatwebOutput, true);
+                if (is_array($jsonData)) {
+                    foreach ($jsonData as $target) {
+                        if (isset($target['plugins'])) {
+                            foreach ($target['plugins'] as $plugin => $data) {
+                                if ($plugin !== 'Title' && $plugin !== 'IP') {
+                                    $version = isset($data['version']) ? " " . $data['version'] : "";
+                                    $technologies[] = $plugin . $version;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // Fallback to regex parsing if JSON fails
+                preg_match_all('/\[(.*?)\]/', $whatwebOutput, $matches);
+                foreach ($matches[1] as $match) {
+                    if (strpos($match, 'Title') === false && strpos($match, 'IP') === false) {
+                        $parts = explode('[', $match);
+                        foreach ($parts as $part) {
+                            if (!empty($part)) {
+                                $tech = trim(str_replace(']', '', $part));
+                                if ($tech) $technologies[] = $tech;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            $technologies = array_unique($technologies);
+        @endphp
+        
+        <div class="tech-grid">
+            @foreach($technologies as $tech)
+            <div class="tech-item">{{ $tech }}</div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     @if(isset($results['nmap']))
     <div class="section">
         <div class="section-title">Security Overview</div>
         @php
             $nmapOutput = $results['nmap'][0]->raw_output;
-            $isSecure = !str_contains(strtolower($nmapOutput), 'vulnerable');
+            preg_match_all('/(\d+)\/tcp\s+(\w+)\s+(\w+)\s+(.*)/', $nmapOutput, $matches);
+            $ports = [];
+            for ($i = 0; $i < count($matches[0]); $i++) {
+                $ports[] = [
+                    'number' => $matches[1][$i],
+                    'state' => $matches[2][$i],
+                    'service' => $matches[3][$i],
+                    'version' => $matches[4][$i]
+                ];
+            }
         @endphp
-        <div class="info-row">
-            <strong>Security Status:</strong>
-            {{ $isSecure ? 'No Critical Issues Found' : 'Some Attention Required' }}
-        </div>
-        <p>Basic security scan completed for {{ parse_url($scan->domain, PHP_URL_HOST) }}</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Port</th>
+                    <th>State</th>
+                    <th>Service</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($ports as $port)
+                <tr>
+                    <td>{{ $port['number'] }}/tcp</td>
+                    <td>{{ $port['state'] }}</td>
+                    <td>{{ $port['service'] }}</td>
+                    <td>{{ $port['version'] }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
     @endif
 
@@ -118,7 +217,7 @@
         <ul class="resource-list">
             @foreach($resources as $resource)
             <li class="resource-item">
-                /{{ $resource['path'] }}
+                /{{ $resource['path'] }} (Status: {{ $resource['status'] }})
             </li>
             @endforeach
         </ul>
@@ -135,6 +234,8 @@
             <li>Implement proper access controls for sensitive resources</li>
             <li>Monitor server logs for suspicious activities</li>
             <li>Consider implementing a Web Application Firewall (WAF)</li>
+            <li>Keep all discovered technologies up to date with security patches</li>
+            <li>Review and secure all discovered resources and open ports</li>
         </ul>
     </div>
 
