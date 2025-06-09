@@ -7,6 +7,15 @@
 
     <title>{{ __('messages.app_name') }}</title>
 
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}?v=2">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/favicon.svg') }}?v=2">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ asset('images/favicon-96x96.png') }}?v=2">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=2">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="{{ asset('images/site.webmanifest') }}?v=2">
+
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -16,6 +25,55 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('scripts')
+    <style>
+        @keyframes neonFlicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow:
+                    0 0 7px #0fa,
+                    0 0 10px #0fa,
+                    0 0 14px #0fa,
+                    0 0 22px #0fa8,
+                    0 0 30px #0fa5;
+                opacity: 0.95;
+            }
+            20%, 21%, 23%, 24%, 55%, 56% {
+                text-shadow: none;
+                opacity: 0.3;
+            }
+        }
+        @keyframes neonNoise {
+            0%, 100% { opacity: 0.99; }
+            50% { opacity: 0.94; }
+        }
+        .neon-text {
+            color: #fff;
+            animation: 
+                neonFlicker 3s infinite alternate-reverse,
+                neonNoise 0.11s infinite;
+            position: relative;
+            letter-spacing: 0.15em;
+        }
+        .neon-text::before {
+            content: 'BlackPath';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            filter: blur(0.007em);
+            opacity: 0.5;
+        }
+        .neon-text::after {
+            content: 'BlackPath';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            filter: blur(0.01em);
+            opacity: 0.3;
+        }
+    </style>
 </head>
 <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
     <div class="min-h-screen">
@@ -24,15 +82,15 @@
                 <div class="flex justify-between h-16">
                     <div class="flex">
                         <div class="flex-shrink-0 flex items-center">
-                            <a href="{{ route('scans.index') }}" class="text-xl font-bold text-gray-800 dark:text-white">
-                                {{ __('messages.app_name') }}
+                            <a href="{{ route('scans.index') }}" class="flex items-center">
+                                <span class="text-2xl font-mono font-bold neon-text" style="text-shadow: 0 0 4px rgba(0, 255, 170, 0.2);">BlackPath</span>
                             </a>
                         </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <a href="{{ route('scans.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('scans.index') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8 w-full">
+                            <a href="{{ route('scans.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 flex-1 justify-center {{ request()->routeIs('scans.index') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
                                 {{ __('messages.scans') }}
                             </a>
-                            <a href="{{ route('scans.create') }}" class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('scans.create') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
+                            <a href="{{ route('scans.create') }}" class="inline-flex items-center px-1 pt-1 border-b-2 flex-1 justify-center {{ request()->routeIs('scans.create') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
                                 {{ __('messages.new_scan') }}
                             </a>
                         </div>
