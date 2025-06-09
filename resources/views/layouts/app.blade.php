@@ -29,11 +29,11 @@
         @keyframes neonFlicker {
             0%, 18%, 22%, 25%, 53%, 57%, 100% {
                 text-shadow:
-                    0 0 7px #0fa,
-                    0 0 10px #0fa,
-                    0 0 14px #0fa,
-                    0 0 22px #0fa8,
-                    0 0 30px #0fa5;
+                    0 0 7px #6366f1,
+                    0 0 10px #6366f1,
+                    0 0 14px #6366f1,
+                    0 0 22px #6366f180,
+                    0 0 30px #6366f150;
                 opacity: 0.95;
             }
             20%, 21%, 23%, 24%, 55%, 56% {
@@ -83,14 +83,14 @@
                     <div class="flex">
                         <div class="flex-shrink-0 flex items-center">
                             <a href="{{ route('scans.index') }}" class="flex items-center">
-                                <span class="text-2xl font-mono font-bold neon-text" style="text-shadow: 0 0 4px rgba(0, 255, 170, 0.2);">BlackPath</span>
+                                <span class="text-2xl font-mono font-bold neon-text" style="text-shadow: 0 0 4px rgba(99, 102, 241, 0.2);">BlackPath</span>
                             </a>
                         </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8 w-full">
-                            <a href="{{ route('scans.index') }}" class="inline-flex items-center px-1 pt-1 border-b-2 flex-1 justify-center {{ request()->routeIs('scans.index') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
+                        <div class="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-8">
+                            <a href="{{ route('scans.index') }}" class="inline-flex items-center px-4 pt-1 border-b-2 {{ request()->routeIs('scans.index') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
                                 {{ __('messages.scans') }}
                             </a>
-                            <a href="{{ route('scans.create') }}" class="inline-flex items-center px-1 pt-1 border-b-2 flex-1 justify-center {{ request()->routeIs('scans.create') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
+                            <a href="{{ route('scans.create') }}" class="inline-flex items-center px-4 pt-1 border-b-2 {{ request()->routeIs('scans.create') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 hover:text-gray-700 dark:hover:text-gray-300' }}">
                                 {{ __('messages.new_scan') }}
                             </a>
                         </div>
