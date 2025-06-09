@@ -64,13 +64,6 @@
                             </svg>
                             Export
                         </a>
-                        <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full
-                            {{ $scan->status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : '' }}
-                            {{ $scan->status === 'running' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' }}
-                            {{ $scan->status === 'failed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : '' }}
-                            {{ $scan->status === 'queued' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300' : '' }}">
-                            {{ ucfirst($scan->status) }}
-                        </span>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-6 text-sm text-gray-600 dark:text-gray-400">
@@ -156,7 +149,7 @@
 
                 @if(count($info['redirects']) > 0)
                 <div class="mb-8">
-                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Redirecciones Detectadas</h4>
+                    <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Detected Redirections</h4>
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         @foreach($info['redirects'] as $from => $to)
                         <div class="flex items-center space-x-2 text-sm">
@@ -172,10 +165,10 @@
                 @endif
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Tecnologías del Servidor -->
+                    <!-- Server Technologies -->
                     @if(count($info['server']) > 0)
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Servidor Web</h4>
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Web Server</h4>
                         <div class="space-y-2">
                             @foreach($info['server'] as $tech => $version)
                             <div class="flex items-center space-x-2">
@@ -185,7 +178,7 @@
                                 <span class="text-sm text-gray-700 dark:text-gray-300">
                                     {{ $tech }}
                                     @if($version)
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">versión {{ $version }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">version {{ $version }}</span>
                                     @endif
                                 </span>
                             </div>
@@ -194,10 +187,10 @@
                     </div>
                     @endif
 
-                    <!-- Tecnologías Frontend -->
+                    <!-- Frontend Technologies -->
                     @if(count($info['frontend']) > 0)
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Tecnologías Frontend</h4>
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Frontend Technologies</h4>
                         <div class="space-y-2">
                             @foreach($info['frontend'] as $tech => $version)
                             <div class="flex items-center space-x-2">
@@ -207,7 +200,7 @@
                                 <span class="text-sm text-gray-700 dark:text-gray-300">
                                     {{ $tech }}
                                     @if($version)
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">versión {{ $version }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">version {{ $version }}</span>
                                     @endif
                                 </span>
                             </div>
@@ -216,10 +209,10 @@
                     </div>
                     @endif
 
-                    <!-- Características de Seguridad -->
+                    <!-- Security Features -->
                     @if(count($info['security']) > 0)
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Características de Seguridad</h4>
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Security Features</h4>
                         <div class="space-y-2">
                             @foreach($info['security'] as $feature)
                             <div class="flex items-center space-x-2">
@@ -233,10 +226,10 @@
                     </div>
                     @endif
 
-                    <!-- Información de Contacto -->
+                    <!-- Contact Information -->
                     @if(isset($info['contact']['email']))
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Información de Contacto</h4>
+                        <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">Contact Information</h4>
                         <div class="flex items-center space-x-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />

@@ -8,13 +8,24 @@
     <title>{{ __('messages.app_name') }}</title>
 
     <!-- Favicon and App Icons -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}?v=2">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/favicon.svg') }}?v=2">
-    <link rel="icon" type="image/png" sizes="96x96" href="{{ asset('images/favicon-96x96.png') }}?v=2">
-    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16x16.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('images/favicon.ico') }}">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="BlackPath">
+    <meta name="apple-mobile-web-app-title" content="BlackPath">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="theme-color" content="#1f2937">
+    
+    <!-- Android Chrome Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/android-chrome-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/android-chrome-512x512.png') }}">
     
     <!-- Web App Manifest -->
-    <link rel="manifest" href="{{ asset('images/site.webmanifest') }}?v=2">
+    <link rel="manifest" href="{{ asset('images/site.webmanifest') }}">
 
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
