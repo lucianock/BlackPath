@@ -25,6 +25,30 @@
                     progress: 0,
                     scanId: null,
                     timer: null,
+                    loadingDomain: false,
+                    async getRandomDomain() {
+                        this.loadingDomain = true;
+                        try {
+                            const response = await fetch('/random-domain', {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                                }
+                            });
+                            if (!response.ok) throw new Error('Failed to fetch domain');
+                            const data = await response.json();
+                            document.getElementById('domain').value = data.domain;
+                        } catch (e) {
+                            console.error('Error fetching random domain:', e);
+                            swalConfig.fire({
+                                title: 'Error',
+                                text: 'Failed to fetch random domain. Please try again.',
+                                icon: 'error'
+                            });
+                        } finally {
+                            this.loadingDomain = false;
+                        }
+                    },
                     async startScan() {
                         try {
                             this.scanning = true;
@@ -131,15 +155,31 @@
                         <label for="domain" class="block text-base font-medium text-gray-700 dark:text-gray-300">
                             Domain to scan
                         </label>
-                        <div class="mt-1 relative rounded-lg shadow-sm">
+                        <div class="mt-1 relative rounded-lg shadow-sm flex space-x-2">
                             <input type="text" name="domain" id="domain" required
                                 class="h-12 block w-full pl-4 pr-12 text-base border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 dark:bg-gray-700 dark:text-white transition-colors duration-200"
                                 placeholder="example.com or https://example.com"
                                 :disabled="scanning"
                             >
+                            <button type="button"
+                                @click="getRandomDomain"
+                                :disabled="scanning || loadingDomain"
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                                <template x-if="!loadingDomain">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </template>
+                                <template x-if="loadingDomain">
+                                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </template>
+                            </button>
                         </div>
                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Enter the domain you want to analyze (e.g. example.com)
+                            Enter the domain you want to analyze (e.g. example.com) or click the refresh button for a random recent domain
                         </p>
                     </div>
 

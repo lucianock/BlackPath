@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\PreferencesController;
+use App\Http\Controllers\RandomDomainController;
 
 Route::get('/', function () {
     return redirect()->route('scans.create');
@@ -15,3 +16,5 @@ Route::get('/scans/{scan}/export', [ScanController::class, 'export'])->name('sca
 
 Route::post('/preferences/language', [PreferencesController::class, 'updateLanguage'])->name('preferences.language');
 Route::post('/preferences/theme', [PreferencesController::class, 'updateTheme'])->name('preferences.theme');
+
+Route::get('/random-domain', RandomDomainController::class);
