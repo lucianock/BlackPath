@@ -24,47 +24,12 @@
                     error: null,
                     progress: 0,
                     scanId: null,
-                    estimatedTime: 0,
-                    elapsedTime: 0,
-                    retryCount: 0,
-                    maxRetries: 5,
-                    retryDelay: 5000,
                     timer: null,
-                    stage: null,
-                    timeRemaining: 0,
-                    statusInterval: null,
-                    stages: {
-                        'http_check': { name: 'Checking website accessibility', weight: 5 },
-                        'whatweb': { name: 'Analyzing technologies', weight: 20 },
-                        'nmap': { name: 'Analyzing security (Port scanning)', weight: 30 },
-                        'gobuster': { name: 'Discovering resources', weight: 45 }
-                    },
-                    getCurrentStatus() {
-                        if (!this.stage) return 'Initializing scan...';
-                        return this.stages[this.stage]?.name || 'Processing...';
-                    },
-                    getStageProgress(stageName) {
-                        if (this.stage === stageName) {
-                            return this.progress;
-                        }
-                        if (Object.keys(this.stages).indexOf(stageName) < Object.keys(this.stages).indexOf(this.stage)) {
-                            return 100;
-                        }
-                        return 0;
-                    },
-                    formatTime(seconds) {
-                        if (!seconds || seconds < 0) return '0:00';
-                        const mins = Math.floor(Math.abs(seconds) / 60);
-                        const secs = Math.floor(Math.abs(seconds) % 60);
-                        return `${mins}:${secs.toString().padStart(2, '0')}`;
-                    },
                     async startScan() {
                         try {
                             this.scanning = true;
                             this.error = null;
                             this.progress = 0;
-                            this.elapsedTime = 0;
-                            this.retryCount = 0;
                             
                             const response = await fetch('{{ route('scans.store') }}', {
                                 method: 'POST',
@@ -86,7 +51,6 @@
 
                             const data = await response.json();
                             this.scanId = data.scan_id;
-                            this.estimatedTime = data.estimated_time;
                             this.startStatusCheck();
                         } catch (e) {
                             this.error = e.message;
@@ -111,7 +75,6 @@
 
                             const data = await response.json();
                             this.progress = data.progress;
-                            this.retryCount = 0; // Resetear el contador de reintentos si la petición fue exitosa
 
                             if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
                                 this.scanning = false;
@@ -120,31 +83,19 @@
                                 }
                                 clearInterval(this.timer);
                                 if (data.status === 'completed') {
-                                    window.location.href = `/scans/${this.scanId}`;
+                                    window.open(`/scans/${this.scanId}`, '_blank');
                                 }
                             }
                         } catch (e) {
                             console.error('Error checking status:', e);
                             
-                            // Incrementar contador de reintentos
-                            this.retryCount++;
-                            
-                            // Si excedimos el máximo de reintentos, mostrar error
-                            if (this.retryCount >= this.maxRetries) {
-                                this.error = 'Lost connection to server. The scan continues in the background. You can refresh the page to check the status.';
-                                this.scanning = false;
-                                clearInterval(this.timer);
-                                return;
-                            }
-                            
                             // Esperar antes de reintentar
-                            await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+                            await new Promise(resolve => setTimeout(resolve, 5000));
                         }
                     },
                     startStatusCheck() {
                         this.timer = setInterval(() => {
                             this.checkStatus();
-                            this.elapsedTime++;
                         }, 1000);
                     },
                     cancelScan() {
@@ -209,29 +160,6 @@
                     </div>
 
                     <div x-show="scanning" x-cloak class="space-y-6">
-                        <template x-for="(stageInfo, stageName) in stages" :key="stageName">
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="font-medium text-gray-200 dark:text-gray-300" x-text="stageInfo.name"></span>
-                                    <span class="font-bold text-gray-200 dark:text-gray-300" x-text="getStageProgress(stageName) + '%'"></span>
-                                </div>
-                                <div class="w-full bg-gray-700 dark:bg-gray-700 rounded-full h-2">
-                                    <div class="bg-indigo-600 dark:bg-indigo-500 h-2 rounded-full transition-all duration-500"
-                                        :class="{'opacity-50': stage !== stageName && getStageProgress(stageName) === 0}"
-                                        :style="{ width: getStageProgress(stageName) + '%' }">
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-
-                        <div class="flex items-center justify-between text-sm text-gray-200 dark:text-gray-300">
-                            <span x-text="`Time elapsed: ${formatTime(elapsedTime)}`"></span>
-                            <span x-text="`Time remaining: ~${formatTime(timeRemaining)}`"></span>
-                        </div>
-
-                        <div class="text-center text-sm text-gray-200 dark:text-gray-300 mt-2">
-                            <p>Please do not close this window until the scan is complete.</p>
-                        </div>
                     </div>
 
                     <div class="flex justify-end space-x-4 pt-4">
