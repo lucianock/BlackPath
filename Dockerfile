@@ -34,10 +34,10 @@ RUN mkdir -p /app/wordlists /app/results && \
 ENV GOPATH=/home/scanner/go
 ENV PATH=$PATH:/home/scanner/go/bin:/usr/local/go/bin
 
-# Instalar Go desde el sitio oficial
-RUN wget https://go.dev/dl/go1.22.0.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.22.0.linux-amd64.tar.gz && \
-    rm go1.22.0.linux-amd64.tar.gz
+# Instalar Go desde el sitio oficial (versión 1.20 para compatibilidad con Gobuster)
+RUN wget https://go.dev/dl/go1.20.14.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.20.14.linux-amd64.tar.gz && \
+    rm go1.20.14.linux-amd64.tar.gz
 
 # Cambiar al usuario no root
 USER scanner
@@ -49,10 +49,12 @@ RUN git clone https://github.com/urbanadventurer/WhatWeb.git /home/scanner/whatw
     bundle install && \
     sudo ln -s /home/scanner/whatweb/whatweb /usr/local/bin/whatweb
 
-# Instalar Gobuster
-RUN go install github.com/OJ/gobuster/v3@latest && \
-    sudo cp /home/scanner/go/bin/gobuster /usr/local/bin/ && \
-    sudo chmod 755 /usr/local/bin/gobuster
+# Instalar Gobuster desde binario precompilado
+RUN wget https://github.com/OJ/gobuster/releases/download/v3.7.0/gobuster_Linux_x86_64.tar.gz && \
+    tar -xzf gobuster_Linux_x86_64.tar.gz && \
+    sudo mv gobuster /usr/local/bin/ && \
+    sudo chmod 755 /usr/local/bin/gobuster && \
+    rm gobuster_Linux_x86_64.tar.gz
 
 # Descargar wordlists
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /app/wordlists/common.txt && \

@@ -15,7 +15,6 @@ class RunScanJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600; // 10 minutes
     public $tries = 1;
     protected $scanId;
 

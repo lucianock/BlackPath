@@ -81,7 +81,7 @@ class ScanController extends Controller
             Cache::put('scan_ids', $scanIds, 3600);
 
             // Start scan process directly
-            $this->scannerService->startScanProcess($scanId);
+            \App\Jobs\RunScanJob::dispatch($scanId);
 
             // Adjust estimated time based on wordlist
             $estimatedTime = [
