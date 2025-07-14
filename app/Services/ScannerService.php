@@ -44,6 +44,8 @@ class ScannerService
             } catch (\Exception $e) {
                 Cache::put($scanId . '_status', 'failed', 3600);
                 Cache::put($scanId . '_message', 'Website not accessible: ' . $e->getMessage(), 3600);
+                Cache::put($scanId . '_progress', 100, 3600);
+                Cache::put($scanId . '_finished_at', now(), 3600);
                 return;
             }
 
@@ -59,6 +61,8 @@ class ScannerService
             } catch (\Exception $e) {
                 Cache::put($scanId . '_status', 'failed', 3600);
                 Cache::put($scanId . '_message', 'WhatWeb failed: ' . $e->getMessage(), 3600);
+                Cache::put($scanId . '_progress', 100, 3600);
+                Cache::put($scanId . '_finished_at', now(), 3600);
                 return;
             }
 
@@ -74,6 +78,8 @@ class ScannerService
             } catch (\Exception $e) {
                 Cache::put($scanId . '_status', 'failed', 3600);
                 Cache::put($scanId . '_message', 'Nmap failed: ' . $e->getMessage(), 3600);
+                Cache::put($scanId . '_progress', 100, 3600);
+                Cache::put($scanId . '_finished_at', now(), 3600);
                 return;
             }
 
@@ -89,15 +95,20 @@ class ScannerService
             } catch (\Exception $e) {
                 Cache::put($scanId . '_status', 'failed', 3600);
                 Cache::put($scanId . '_message', 'Gobuster failed: ' . $e->getMessage(), 3600);
+                Cache::put($scanId . '_progress', 100, 3600);
+                Cache::put($scanId . '_finished_at', now(), 3600);
                 return;
             }
 
             Cache::put($scanId . '_status', 'completed', 3600);
             Cache::put($scanId . '_progress', 100, 3600);
             Cache::put($scanId . '_message', 'Scan completed successfully', 3600);
+            Cache::put($scanId . '_finished_at', now(), 3600);
         } catch (\Exception $e) {
             Cache::put($scanId . '_status', 'failed', 3600);
             Cache::put($scanId . '_message', 'Scan failed: ' . $e->getMessage(), 3600);
+            Cache::put($scanId . '_progress', 100, 3600);
+            Cache::put($scanId . '_finished_at', now(), 3600);
         }
     }
 

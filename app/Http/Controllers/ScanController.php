@@ -46,9 +46,10 @@ class ScanController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('scans.create');
+        $userIp = $request->ip();
+        return view('scans.create', ['userIp' => $userIp]);
     }
 
     public function store(Request $request)

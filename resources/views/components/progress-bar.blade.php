@@ -13,7 +13,7 @@
         <div class="flex mb-2 items-center justify-between">
             <div>
                 <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full" :class="isComplete ? 'text-green-600 bg-green-200 dark:text-green-400 dark:bg-green-900' : 'text-indigo-600 bg-indigo-200 dark:text-indigo-400 dark:bg-indigo-900'">
-                    <span x-text="isComplete ? '{{ __('messages.scan_complete') }}' : '{{ __('messages.scanning') }}'"></span>
+                    <span x-text="isComplete ? 'Scan Complete' : 'Scanning'"></span>
                 </span>
             </div>
             <div class="text-right">
