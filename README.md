@@ -1,61 +1,231 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BlackPath - Web Security Scanner
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="https://img.shields.io/badge/Laravel-10.x-red?style=for-the-badge&logo=laravel" alt="Laravel">
+  <img src="https://img.shields.io/badge/PHP-8.1+-blue?style=for-the-badge&logo=php" alt="PHP">
+  <img src="https://img.shields.io/badge/Docker-Enabled-green?style=for-the-badge&logo=docker" alt="Docker">
 </p>
 
-## About Laravel
+## 🎯 Descripción
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+BlackPath es una herramienta de escaneo de seguridad web desarrollada en Laravel que permite realizar análisis completos de sitios web utilizando herramientas de reconocimiento como **WhatWeb**, **Nmap** y **Gobuster**. La aplicación proporciona una interfaz web intuitiva para ejecutar escaneos y visualizar los resultados en tiempo real.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## ✨ Características
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **🔍 Escaneo de Tecnologías**: Análisis de tecnologías web con WhatWeb
+- **🌐 Escaneo de Puertos**: Detección de puertos abiertos con Nmap
+- **📁 Escaneo de Directorios**: Búsqueda de directorios y archivos con Gobuster
+- **⚡ Procesamiento en Tiempo Real**: Actualizaciones en vivo del progreso del escaneo
+- **📊 Interfaz Web Moderna**: UI intuitiva con barra de progreso y estados
+- **🐳 Contenedores Docker**: Entorno aislado y reproducible
+- **💾 Almacenamiento Temporal**: Resultados guardados en cache (1 hora de expiración)
+- **📄 Exportación PDF**: Generación de reportes en formato PDF
 
-## Learning Laravel
+## 🛠️ Herramientas Integradas
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **WhatWeb**: Análisis de tecnologías web y frameworks
+- **Nmap**: Escaneo de puertos y servicios
+- **Gobuster**: Búsqueda de directorios y archivos
+- **Wordlists**: Múltiples listas de palabras (common, medium, full)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 🚀 Instalación
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Prerrequisitos
 
-## Laravel Sponsors
+- Docker y Docker Compose
+- PHP 8.1 o superior
+- Composer
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Pasos de Instalación
 
-### Premium Partners
+1. **Clonar el repositorio**
+```bash
+git clone https://github.com/lucianock/BlackPath
+cd BlackPath
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+2. **Instalar dependencias de PHP**
+```bash
+composer install
+```
 
-## Contributing
+3. **Configurar variables de entorno**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+5. **Ejecutar migraciones (OBLIGATORIO para jobs)**
+```bash
+php artisan migrate
+```
 
-## Code of Conduct
+6. **Configurar archivos necesarios**
+```bash
+php setup-files.php
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+7. **Verificar que todo funcione**
+```bash
+docker ps
+```
 
-## Security Vulnerabilities
+8. **Iniciar el worker de jobs (IMPORTANTE)**
+```bash
+php artisan queue:work --daemon
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+9. **Iniciar BlackPath!**
+```bash
+php artisan serve
+```
 
-## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🎮 Uso
+
+### Iniciar un Escaneo
+
+1. Abre tu navegador y ve a `http://localhost`
+2. Ingresa el dominio que quieres escanear
+3. Selecciona la wordlist (common, medium, full)
+4. Haz clic en "Iniciar Escaneo"
+
+### Tipos de Wordlists
+
+- **Common**: ~4,000 palabras (~2-3 minutos)
+- **Medium**: ~14,000 palabras (~4-5 minutos)  
+- **Full**: ~100,000 palabras (~15-20 minutos)
+
+### Monitorear Progreso
+
+- La página se actualiza automáticamente
+- Barra de progreso en tiempo real
+- Estados detallados de cada herramienta
+- Redirección automática al completar
+
+## 📁 Estructura del Proyecto
+
+```
+blackpath/
+├── app/
+│   ├── Http/Controllers/    # Controladores de la aplicación
+│   ├── Jobs/               # Jobs para procesamiento en segundo plano
+│   ├── Services/           # Servicios de escaneo
+│   └── Models/             # Modelos de datos
+├── resources/views/        # Vistas Blade
+├── docker/                 # Configuración de Docker
+├── storage/scanner/        # Logs y resultados temporales
+└── docker-compose.yml      # Configuración de contenedores
+```
+
+## 🔧 Configuración
+
+### Variables de Entorno
+
+```env
+APP_NAME=BlackPath
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+
+CACHE_DRIVER=file
+SESSION_DRIVER=file
+QUEUE_CONNECTION=sync
+```
+
+### 🔧 Configuración de Jobs
+
+El proyecto usa jobs en cola para procesar escaneos. Asegúrate de que en tu `.env` tengas:
+
+```env
+QUEUE_CONNECTION=database
+```
+
+Y que hayas ejecutado las migraciones para crear la tabla `jobs`.
+
+### 📁 Archivos Necesarios
+
+El proyecto requiere algunos archivos que no están en Git por seguridad:
+
+- **`storage/app/domains/domain-names.txt`**: Lista de dominios para el generador aleatorio
+- **`storage/app/wordlists/`**: Directorios para wordlists (se descargan automáticamente)
+- **`storage/logs/`**: Directorio para logs de Laravel
+- **`storage/framework/`**: Directorios para cache, sesiones y vistas
+
+El script `setup-files.php` crea automáticamente estos archivos y directorios.
+
+### Docker
+
+El proyecto incluye un contenedor Docker con todas las herramientas necesarias:
+- Ubuntu 22.04
+- WhatWeb 0.5.5
+- Nmap
+- Gobuster 3.7.0
+- Wordlists de SecLists
+
+## 📊 Resultados
+
+Los escaneos generan:
+
+- **Análisis de Tecnologías**: Frameworks, servidores, tecnologías detectadas
+- **Puertos Abiertos**: Servicios y puertos disponibles
+- **Directorios Encontrados**: Rutas y archivos descubiertos
+- **Reporte PDF**: Exportación completa de resultados
+
+## 🔍 Logs y Debugging
+
+### Ver Logs de Laravel
+```bash
+tail -f storage/logs/laravel.log
+```
+
+### Ver Logs de Docker
+```bash
+docker-compose logs -f
+```
+
+### Ver Jobs en Cola
+```bash
+php artisan queue:work --verbose
+```
+
+### Ver Jobs Fallidos
+```bash
+php artisan queue:failed
+```
+
+## 🛡️ Seguridad
+
+- **Uso Ético**: Solo escanea sitios que poseas o tengas autorización
+- **Rate Limiting**: Implementado para prevenir abuso
+- **Validación de Entrada**: Sanitización de dominios
+- **Contenedores Aislados**: Herramientas ejecutadas en Docker
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## ⚠️ Disclaimer
+
+Esta herramienta está diseñada únicamente para propósitos educativos y de testing en entornos controlados. Los usuarios son responsables de cumplir con todas las leyes y regulaciones aplicables al usar esta herramienta.
+
+## 🆘 Soporte
+
+Si encuentras algún problema:
+
+1. Revisa los logs en `storage/logs/laravel.log`
+2. Verifica que Docker esté funcionando: `docker ps`
+3. Revisa el estado de los contenedores: `docker-compose logs`
+4. Abre un issue en GitHub con detalles del error
+
+---
+
+**Desarrollado con ❤️ usando Laravel y Docker**

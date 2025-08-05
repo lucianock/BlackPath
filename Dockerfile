@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libyaml-dev \
     sudo \
+    whatweb \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear usuario no root y agregar al grupo sudo
@@ -42,12 +43,6 @@ RUN wget https://go.dev/dl/go1.20.14.linux-amd64.tar.gz && \
 # Cambiar al usuario no root
 USER scanner
 WORKDIR /app
-
-# Instalar WhatWeb
-RUN git clone https://github.com/urbanadventurer/WhatWeb.git /home/scanner/whatweb && \
-    cd /home/scanner/whatweb && \
-    bundle install && \
-    sudo ln -s /home/scanner/whatweb/whatweb /usr/local/bin/whatweb
 
 # Instalar Gobuster desde binario precompilado
 RUN wget https://github.com/OJ/gobuster/releases/download/v3.7.0/gobuster_Linux_x86_64.tar.gz && \
