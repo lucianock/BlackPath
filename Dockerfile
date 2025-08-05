@@ -3,15 +3,16 @@ FROM ubuntu:22.04
 # Evitar prompts interactivos durante la instalación
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Actualizar e instalar dependencias
+# Actualizar e instalar dependencias básicas
 RUN apt-get update && apt-get install -y \
     nmap \
-    golang \
     git \
     iputils-ping \
     dnsutils \
     net-tools \
     wget \
+    curl \
+    ca-certificates \
     ruby \
     ruby-dev \
     ruby-bundler \
@@ -35,31 +36,35 @@ RUN mkdir -p /app/wordlists /app/results && \
 ENV GOPATH=/home/scanner/go
 ENV PATH=$PATH:/home/scanner/go/bin:/usr/local/go/bin
 
-# Instalar Go desde el sitio oficial (versión 1.20 para compatibilidad con Gobuster)
-RUN wget https://go.dev/dl/go1.20.14.linux-amd64.tar.gz && \
+# Instalar Go desde el sitio oficial con manejo de errores
+RUN wget --no-verbose --tries=3 --timeout=60 https://go.dev/dl/go1.20.14.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf go1.20.14.linux-amd64.tar.gz && \
-    rm go1.20.14.linux-amd64.tar.gz
+    rm go1.20.14.linux-amd64.tar.gz && \
+    ln -sf /usr/local/go/bin/go /usr/local/bin/go
 
 # Cambiar al usuario no root
 USER scanner
 WORKDIR /app
 
-# Instalar Gobuster desde binario precompilado
-RUN wget https://github.com/OJ/gobuster/releases/download/v3.7.0/gobuster_Linux_x86_64.tar.gz && \
+# Instalar Gobuster desde binario precompilado con manejo de errores
+RUN wget --no-verbose --tries=3 --timeout=60 https://github.com/OJ/gobuster/releases/download/v3.7.0/gobuster_Linux_x86_64.tar.gz && \
     tar -xzf gobuster_Linux_x86_64.tar.gz && \
     sudo mv gobuster /usr/local/bin/ && \
     sudo chmod 755 /usr/local/bin/gobuster && \
     rm gobuster_Linux_x86_64.tar.gz
 
-# Descargar wordlists
-RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /app/wordlists/common.txt && \
-    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-directories.txt -O /app/wordlists/medium.txt && \
-    wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-large-directories.txt -O /app/wordlists/full.txt
+# Descargar wordlists con manejo de errores
+RUN wget --no-verbose --tries=3 --timeout=60 https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /app/wordlists/common.txt && \
+    wget --no-verbose --tries=3 --timeout=60 https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-medium-directories.txt -O /app/wordlists/medium.txt && \
+    wget --no-verbose --tries=3 --timeout=60 https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/raft-large-directories.txt -O /app/wordlists/full.txt
 
-# Verificar que las herramientas están instaladas
+# Verificar que las herramientas están instaladas y funcionan
 RUN which nmap && \
     which gobuster && \
-    which whatweb
+    which whatweb && \
+    nmap --version && \
+    gobuster version && \
+    whatweb --version
 
 # Mantener el contenedor corriendo
 CMD ["tail", "-f", "/dev/null"] 

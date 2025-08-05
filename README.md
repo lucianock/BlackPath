@@ -55,7 +55,13 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-5. **Ejecutar migraciones (OBLIGATORIO para jobs)**
+4. **Construir y ejecutar contenedores Docker**
+```bash
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+5. **Ejecutar migraciones (OBLIGATORIO)**
 ```bash
 php artisan migrate
 ```
@@ -65,21 +71,63 @@ php artisan migrate
 php artisan blackpath:setup-files
 ```
 
-7. **Verificar que todo funcione**
-```bash
-docker ps
-```
-
-8. **Iniciar el worker de jobs (IMPORTANTE)**
+7. **Iniciar el worker de jobs (IMPORTANTE)**
 ```bash
 php artisan queue:work --daemon
 ```
 
-9. **Iniciar BlackPath!**
+8. **Iniciar BlackPath!**
 ```bash
 php artisan serve
 ```
 
+### ⚠️ Pasos Críticos
+
+**IMPORTANTE**: Si los escaneos no funcionan, verifica que hayas ejecutado:
+
+1. **Migraciones** (para la tabla de jobs):
+```bash
+php artisan migrate
+```
+
+2. **Worker de jobs** (para procesar escaneos):
+```bash
+php artisan queue:work --daemon
+```
+
+3. **Verificar contenedor Docker**:
+```bash
+docker ps
+docker exec url-scanner-tools whatweb --version
+```
+
+### ✅ Verificación Rápida
+
+Para confirmar que todo está funcionando correctamente:
+
+```bash
+# 1. Verificar que Docker esté ejecutándose
+docker ps
+
+# 2. Verificar que las herramientas estén instaladas
+docker exec url-scanner-tools whatweb --version
+docker exec url-scanner-tools nmap --version
+docker exec url-scanner-tools gobuster version
+
+# 3. Verificar que los archivos necesarios existan
+php artisan blackpath:setup-files
+
+# 4. Verificar que el worker esté funcionando
+php artisan queue:work --once --verbose
+
+# 5. Verificar el contenedor Docker completamente
+php check-docker.php
+
+# 6. Iniciar la aplicación
+php artisan serve
+```
+
+Si todos los comandos anteriores funcionan sin errores, BlackPath está listo para usar.
 
 ## 🎮 Uso
 
@@ -230,5 +278,44 @@ Si encuentras algún problema:
 
 **Desarrollado con ❤️ usando Laravel y Docker**
 
+### 🔧 Troubleshooting Común
+
+**Problema**: "We're waiting for this website to finish loading"
+- **Solución**: Ejecuta `php artisan queue:work --daemon`
+
+**Problema**: "WhatWeb failed"
+- **Solución**: Verifica que Docker esté ejecutándose: `docker-compose up -d`
+
 **Problema**: "Failed to fetch random domain"
 - **Solución**: Ejecuta `php artisan blackpath:setup-files`
+
+**Problema**: Los escaneos no inician
+- **Solución**: Ejecuta las migraciones: `php artisan migrate`
+
+**Problema**: Errores durante la construcción de Docker (líneas rojas)
+- **Solución**: 
+```bash
+# Detener y eliminar contenedores
+docker-compose down
+
+# Limpiar cache de Docker
+docker system prune -f
+
+# Reconstruir sin cache
+docker-compose build --no-cache
+
+# Verificar la construcción
+php check-docker.php
+```
+
+**Problema**: Herramientas no funcionan en el contenedor
+- **Solución**: 
+```bash
+# Verificar el estado del contenedor
+docker logs url-scanner-tools
+
+# Reconstruir completamente
+docker-compose down
+docker-compose build --no-cache --pull
+docker-compose up -d
+```
