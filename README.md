@@ -62,7 +62,7 @@ php artisan migrate
 
 6. **Configurar archivos necesarios**
 ```bash
-php setup-files.php
+php artisan blackpath:setup-files
 ```
 
 7. **Verificar que todo funcione**
@@ -229,3 +229,6 @@ Si encuentras algún problema:
 ---
 
 **Desarrollado con ❤️ usando Laravel y Docker**
+
+**Problema**: "Failed to fetch random domain"
+- **Solución**: Ejecuta `php artisan blackpath:setup-files`
